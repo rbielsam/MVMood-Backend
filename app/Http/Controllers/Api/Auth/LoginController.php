@@ -20,7 +20,8 @@ class LoginController extends Controller
                         'email' => [
                             'required',
                             'email',
-                            'ends_with:@institutmvm.cat',
+                            /*'ends_with:@institutmvm.cat',
+                            'exists:user_whitelist,email',*/
                         ],
                         'password' => ['required', 'min:8'],
                     ]

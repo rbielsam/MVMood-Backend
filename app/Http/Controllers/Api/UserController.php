@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\UserWhitelist;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -100,7 +101,11 @@ class UserController extends Controller
         $user->likes()->delete();
         $user->publicaciones()->delete();
         $user->tokens()->delete();
+
+        $email = $user->email;
         $user->delete();
+
+        UserWhitelist::where('email', $email)->delete();
 
         return response()->json([
             'message' => 'Cuenta eliminada'
