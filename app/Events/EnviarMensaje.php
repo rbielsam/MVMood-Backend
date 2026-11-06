@@ -2,26 +2,26 @@
 
 namespace App\Events;
 
+use App\Models\Mensaje;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use App\Models\Mensaje;
 
 class EnviarMensaje implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $mensaje;
+
     /**
      * Create a new event instance.
      */
     public function __construct(Mensaje $mensaje)
     {
-        $this->mensaje = $mensaje->load('emisor');
+        $this->mensaje = $mensaje->load('emisor:id,nickname,foto_perfil');
     }
 
     /**
@@ -36,7 +36,8 @@ class EnviarMensaje implements ShouldBroadcastNow
         ];
     }
 
-    public function broadcastAs(): string {
+    public function broadcastAs(): string
+    {
         return 'nuevo-mensaje';
     }
 }
