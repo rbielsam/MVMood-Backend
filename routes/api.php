@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\Api\Auth\ForgotPasswordController;
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\Auth\RegisterController;
+use App\Http\Controllers\Api\Auth\ResetPasswordController;
 use App\Http\Controllers\Api\BloqueoController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\ComentarioController;
@@ -9,9 +11,8 @@ use App\Http\Controllers\Api\LikeController;
 use App\Http\Controllers\Api\PublicacionesController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Broadcast;
-
+use Illuminate\Support\Facades\Route;
 
 Broadcast::routes(['middleware' => ['auth:sanctum']]);
 
@@ -22,7 +23,7 @@ Route::get('/user', function (Request $request) {
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/email/verify/status', function (Request $request) {
         return response()->json([
-            'verified' => $request->user()->hasVerifiedEmail()
+            'verified' => $request->user()->hasVerifiedEmail(),
         ]);
     });
 
@@ -31,6 +32,12 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::post('/register', [RegisterController::class, 'register']);
 
 Route::post('/login', [LoginController::class, 'login']);
+
+Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLink'])
+    ->middleware('throttle:6,1');
+
+Route::post('/reset-password', [ResetPasswordController::class, 'reset'])
+    ->middleware('throttle:6,1');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [LoginController::class, 'logout']);
