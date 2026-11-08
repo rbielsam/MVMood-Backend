@@ -3,24 +3,22 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Laravel\Sanctum\HasApiTokens;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Relations\belongsToMany;
+use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable(['nickname', 'email', 'password', 'foto_perfil'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail
-
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable, HasUuids;
+    use HasApiTokens, HasFactory, HasUuids, Notifiable;
 
     /**
      * Get the attributes that should be cast.
@@ -43,7 +41,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function isBanned(): bool
     {
-        return !is_null($this->banned_at);
+        return ! is_null($this->banned_at);
     }
 
     public function publicaciones()
@@ -56,7 +54,8 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Like::class, 'user_id');
     }
 
-    public function comentarios(){
+    public function comentarios()
+    {
         return $this->hasMany(Comentario::class, 'user_id');
     }
 
@@ -65,7 +64,8 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Bloqueo::class, 'bloqueador_id');
     }
 
-    public function chats() {
-        return $this->belongsToMany(Chat::class,'chat_user');
+    public function chats()
+    {
+        return $this->belongsToMany(Chat::class, 'chat_user')->withPivot('last_read_at');
     }
 }

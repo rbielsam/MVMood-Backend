@@ -16,12 +16,15 @@ class EnviarMensaje implements ShouldBroadcastNow
 
     public $mensaje;
 
+    public string $receptorId;
+
     /**
      * Create a new event instance.
      */
-    public function __construct(Mensaje $mensaje)
+    public function __construct(Mensaje $mensaje, string $receptorId)
     {
         $this->mensaje = $mensaje->load('emisor:id,nickname,foto_perfil');
+        $this->receptorId = $receptorId;
     }
 
     /**
@@ -33,6 +36,7 @@ class EnviarMensaje implements ShouldBroadcastNow
     {
         return [
             new PrivateChannel('chat.'.$this->mensaje->chat->id),
+            new PrivateChannel('user.'.$this->receptorId),
         ];
     }
 

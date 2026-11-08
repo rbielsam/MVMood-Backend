@@ -59,6 +59,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/chats', [ChatController::class, 'misChats']);
     Route::get('/chats/{chatId}/mensajes', [ChatController::class, 'mostrarMensajes']);
     Route::post('/chats/enviar', [ChatController::class, 'enviar']);
+    Route::post('/chats/{chatId}/leer', [ChatController::class, 'marcarLeido']);
 });
 
 Route::middleware('auth:sanctum')->group(function () {

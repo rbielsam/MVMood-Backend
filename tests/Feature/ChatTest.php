@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Events\EnviarMensaje;
 use App\Models\Chat;
+use App\Models\Mensaje;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -123,5 +125,86 @@ class ChatTest extends TestCase
         $this->actingAs($intruso, 'sanctum')
             ->getJson("/api/chats/{$chat->id}/mensajes")
             ->assertNotFound();
+    }
+
+    public function test_mis_chats_devuelve_los_mensajes_sin_leer(): void
+    {
+        $emisor = $this->crearUsuario('emisor');
+        $receptor = $this->crearUsuario('receptor');
+
+        $this->actingAs($emisor, 'sanctum')->postJson('/api/chats/enviar', [
+            'receptor_id' => $receptor->id,
+            'contenido' => 'Mensaje pendiente',
+        ])->assertCreated();
+
+        $this->actingAs($receptor, 'sanctum')
+            ->getJson('/api/chats')
+            ->assertOk()
+            ->assertJsonPath('0.unread_count', 1);
+
+        $this->actingAs($emisor, 'sanctum')
+            ->getJson('/api/chats')
+            ->assertOk()
+            ->assertJsonPath('0.unread_count', 0);
+    }
+
+    public function test_marcar_leido_elimina_los_mensajes_sin_leer(): void
+    {
+        $emisor = $this->crearUsuario('emisor');
+        $receptor = $this->crearUsuario('receptor');
+
+        $this->actingAs($emisor, 'sanctum')->postJson('/api/chats/enviar', [
+            'receptor_id' => $receptor->id,
+            'contenido' => 'Mensaje pendiente',
+        ])->assertCreated();
+
+        $chat = Chat::firstOrFail();
+
+        $this->actingAs($receptor, 'sanctum')
+            ->postJson("/api/chats/{$chat->id}/leer")
+            ->assertOk()
+            ->assertJsonPath('unread_count', 0);
+
+        $this->actingAs($receptor, 'sanctum')
+            ->getJson('/api/chats')
+            ->assertOk()
+            ->assertJsonPath('0.unread_count', 0);
+    }
+
+    public function test_no_se_puede_marcar_como_leido_un_chat_ajeno(): void
+    {
+        $emisor = $this->crearUsuario('emisor');
+        $receptor = $this->crearUsuario('receptor');
+        $intruso = $this->crearUsuario('intruso');
+
+        $this->actingAs($emisor, 'sanctum')->postJson('/api/chats/enviar', [
+            'receptor_id' => $receptor->id,
+            'contenido' => 'Privado',
+        ])->assertCreated();
+
+        $chat = Chat::firstOrFail();
+
+        $this->actingAs($intruso, 'sanctum')
+            ->postJson("/api/chats/{$chat->id}/leer")
+            ->assertNotFound();
+    }
+
+    public function test_el_evento_de_mensaje_se_difunde_al_canal_del_receptor(): void
+    {
+        $emisor = $this->crearUsuario('emisor');
+        $receptor = $this->crearUsuario('receptor');
+
+        $this->actingAs($emisor, 'sanctum')->postJson('/api/chats/enviar', [
+            'receptor_id' => $receptor->id,
+            'contenido' => 'Hola',
+        ])->assertCreated();
+
+        $mensaje = Mensaje::firstOrFail();
+        $evento = new EnviarMensaje($mensaje, $receptor->id);
+
+        $canales = array_map(fn ($canal) => (string) $canal, $evento->broadcastOn());
+
+        $this->assertContains('private-chat.'.$mensaje->chat_id, $canales);
+        $this->assertContains('private-user.'.$receptor->id, $canales);
     }
 }

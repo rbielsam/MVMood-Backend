@@ -50,7 +50,7 @@ class ChatController extends Controller
         ]);
 
         // 3. Notificar a Pusher
-        broadcast(new EnviarMensaje($mensaje))->toOthers();
+        broadcast(new EnviarMensaje($mensaje, $receptor->id))->toOthers();
         \Log::info('Disparando evento en chat: '.$chat->id);
 
         // return response()->json($mensaje->load('emisor'), 201);
@@ -72,16 +72,44 @@ class ChatController extends Controller
 
     public function misChats()
     {
+        $userId = auth()->id();
+
         $chats = auth()->user()->chats()->with([
             'usuarios:users.id,users.nickname,users.foto_perfil',
             'ultimoMensaje',
-        ])->get()->map(function ($chat) {
+        ])->get()->map(function ($chat) use ($userId) {
             $chat->ultimo_mensaje = $chat->ultimoMensaje;
             unset($chat->ultimoMensaje);
+
+            $mensajesSinLeer = $chat->mensajes()
+                ->where('emisor_id', '!=', $userId);
+
+            if ($chat->pivot->last_read_at) {
+                $mensajesSinLeer->where('created_at', '>', $chat->pivot->last_read_at);
+            }
+
+            $chat->unread_count = $mensajesSinLeer->count();
+            unset($chat->pivot);
 
             return $chat;
         });
 
         return response()->json($chats);
+    }
+
+    public function marcarLeido($chatId)
+    {
+        $chat = Chat::where('id', $chatId)
+            ->whereHas('usuarios', fn ($query) => $query->where('user_id', auth()->id()))
+            ->firstOrFail();
+
+        auth()->user()->chats()->updateExistingPivot($chat->id, [
+            'last_read_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Chat marcado como leído',
+            'unread_count' => 0,
+        ], 200);
     }
 }
